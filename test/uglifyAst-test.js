@@ -68,5 +68,20 @@ vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').add
     'convert object literal': testCase(
         ['object', [['keyName1', ['string', 'stringValue']], ['keyName2', ['array', [['name', 'null'], ['num', 10]]]]]],
         {keyName1: 'stringValue', keyName2: [null, 10]}
-    )
+    ),
+    'convert function to ast': {
+        topic: uglifyAst.objToAst(function foo(bar, quux) {bar();}),
+        'should produce the expected Ast': function (topic) {
+            assert.deepEqual(topic, ['function', 'foo', ['bar', 'quux'], [['stat', ['call', ['name', 'bar'], []]]]]);
+        }
+    },
+    'convert ast to function': {
+        topic: function () {
+            return uglifyAst.astToObj(['function', 'foo', ['bar', 'quux'], [['stat', ['call', ['name', 'bar'], []]]]]);
+        },
+        'should produce the expected object': function (topic) {
+            assert.isFunction(topic);
+            assert.matches(topic.toString(), /^function (?:anonymous\s?)?\(bar,\s*quux\)\s*\{[\n\s]*bar\(\);?[\s\n]*\}$/);
+        }
+    }
 })['export'](module);
