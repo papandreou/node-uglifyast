@@ -83,5 +83,15 @@ vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').add
             assert.isFunction(topic);
             assert.matches(topic.toString(), /^function (?:anonymous\s?)?\(bar,\s*quux\)\s*\{[\n\s]*bar\(\);?[\s\n]*\}$/);
         }
+    },
+    'pullCommonStructuresIntoVars': {
+        topic: function () {
+            var ast = uglifyJs.parser.parse("var foo = [{bar: 'vqowiejjvqowejvqiwoevjqwev'}, 'quux', 'bar', {bar: 'vqowiejjvqowejvqiwoevjqwev'}];");
+            uglifyAst.pullCommonStructuresIntoVars(ast, 'prefix');
+            return ast;
+        },
+        'should pull {bar: \'vqowiejjvqowejvqiwoevjqwev\'} into a var': function (ast) {
+            assert.equal(uglifyJs.uglify.gen_code(ast), 'var prefix1={bar:"vqowiejjvqowejvqiwoevjqwev"};var foo=[prefix1,"quux","bar",prefix1]');
+        }
     }
 })['export'](module);
