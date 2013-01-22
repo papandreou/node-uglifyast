@@ -75,6 +75,22 @@ vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').add
             assert.deepEqual(topic, ['function', 'foo', ['bar', 'quux'], [['stat', ['call', ['name', 'bar'], []]]]]);
         }
     },
+    'canonicalize option': {
+        topic: uglifyAst.objToAst({b: 'b', a: 'a'}, true),
+        'should put the keys in sorted order': function (ast) {
+            assert.deepEqual(ast[1].map(function (keyValueNode) {
+                return keyValueNode[0];
+            }), ['a', 'b']);
+        }
+    },
+    'without canonicalize option': {
+        topic: uglifyAst.objToAst({b: 'b', a: 'a'}),
+        'should put the keys in the original order': function (ast) {
+            assert.deepEqual(ast[1].map(function (keyValueNode) {
+                return keyValueNode[0];
+            }), ['b', 'a']);
+        }
+    },
     'convert ast to function': {
         topic: function () {
             return uglifyAst.astToObj(['function', 'foo', ['bar', 'quux'], [['stat', ['call', ['name', 'bar'], []]]]]);
