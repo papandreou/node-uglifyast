@@ -2,7 +2,7 @@
     "author": "Andreas Lind Petersen <andreas@one.com>",
     "name": "uglifyast",
     "description": "Helpers for converting back and forth between UglifyJS ASTs and JavaScript objects.",
-    "version": "0.1.2",
+    "version": "0.2.0",
     "repository": {
         "url": "git://github.com/papandreou/node-uglifyast.git"
     },
