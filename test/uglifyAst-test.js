@@ -13,9 +13,9 @@ function testCase(ast, obj) {
                 assert.deepEqual(_obj, obj);
             }
         },
-        'from ast to obj through uglifyJs.uglify.gen_code and eval': {
+        'from ast to obj through ast.print_to_string() and eval': {
             topic: function () {
-                return eval('(' + uglifyJs.uglify.gen_code(['toplevel', [['stat', ast]]]) + ')');
+                return eval('(' + ast.print_to_string() + ')');
             },
             'should produce the expected JavaScript object': function (_obj) {
                 assert.deepEqual(_obj, obj);
@@ -26,15 +26,15 @@ function testCase(ast, obj) {
                 return uglifyAst.objToAst(obj);
             },
             'should produce the expected Ast': function (_ast) {
-                assert.deepEqual(_ast, ast);
+                assert.ok(_ast.equivalent_to(ast));
             }
         },
         'from obj to ast through JSON.stringify and uglifyJs.parser': {
             topic: function () {
-                return uglifyJs.parser.parse('(' + JSON.stringify(obj) + ')')[1][0][1]; // Strip 'toplevel' and 'stat' nodes
+                return uglifyJs.parse('(' + JSON.stringify(obj) + ')').body[0].body; // Strip 'toplevel' and 'stat' nodes
             },
             'should produce the expected Ast': function (_ast) {
-                assert.deepEqual(_ast, ast);
+                assert.ok(_ast.equivalent_to(ast));
             }
         }
     };
@@ -42,72 +42,150 @@ function testCase(ast, obj) {
 
 vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').addBatch({
     'convert null': testCase(
-        ['name', 'null'],
+        new uglifyJs.AST_Null(),
         null
     ),
     'convert false': testCase(
-        ['name', 'false'],
+        new uglifyJs.AST_False(),
         false
     ),
     'convert true': testCase(
-        ['name', 'true'],
+        new uglifyJs.AST_True(),
         true
     ),
     'convert string literal': testCase(
-        ['string', 'Hello, \u263a'],
+        new uglifyJs.AST_String({value: 'Hello, \u263a'}),
         'Hello, \u263a'
     ),
     'convert number literal': testCase(
-        ['num', 999],
+        new uglifyJs.AST_Number({value: 999}),
         999
     ),
     'convert array literal': testCase(
-        ['array', [['string', 'foo'], ['name', 'true'], ['array', [['name', 'null']]]]],
+        new uglifyJs.AST_Array({
+            elements: [
+                new uglifyJs.AST_String({value: 'foo'}),
+                new uglifyJs.AST_True(),
+                new uglifyJs.AST_Array({
+                    elements: [
+                        new uglifyJs.AST_Null()
+                    ]
+                })
+            ]
+        }),
         ['foo', true, [null]]
     ),
     'convert object literal': testCase(
-        ['object', [['keyName1', ['string', 'stringValue']], ['keyName2', ['array', [['name', 'null'], ['num', 10]]]]]],
+        new uglifyJs.AST_Object({
+            properties: [
+                new uglifyJs.AST_ObjectKeyVal({
+                    key: 'keyName1',
+                    value: new uglifyJs.AST_String({value: 'stringValue'})
+                }),
+                new uglifyJs.AST_ObjectKeyVal({
+                    key: 'keyName2',
+                    value: new uglifyJs.AST_Array({
+                        elements: [
+                            new uglifyJs.AST_Null(),
+                            new uglifyJs.AST_Number({value: 10})
+                        ]
+                    })
+                })
+            ]
+        }),
         {keyName1: 'stringValue', keyName2: [null, 10]}
     ),
     'convert function to ast': {
         topic: uglifyAst.objToAst(function foo(bar, quux) {bar();}),
-        'should produce the expected Ast': function (topic) {
-            assert.deepEqual(topic, ['function', 'foo', ['bar', 'quux'], [['stat', ['call', ['name', 'bar'], []]]]]);
+        'should produce the expected ast': function (topic) {
+            assert.ok(topic.equivalent_to(
+                new uglifyJs.AST_Function({
+                    name: new uglifyJs.AST_SymbolDeclaration({name: 'foo'}),
+                    argnames: [
+                        new uglifyJs.AST_SymbolFunarg({name: 'bar'}),
+                        new uglifyJs.AST_SymbolFunarg({name: 'quux'})
+                    ],
+                    body: [
+                        new uglifyJs.AST_SimpleStatement({
+                            body: new uglifyJs.AST_Call({
+                                expression: new uglifyJs.AST_SymbolRef({name: 'bar'}),
+                                args: []
+                            })
+                        })
+                    ]
+                })
+            ));
         }
     },
     'canonicalize option': {
         topic: uglifyAst.objToAst({b: 'b', a: 'a'}, true),
         'should put the keys in sorted order': function (ast) {
-            assert.deepEqual(ast[1].map(function (keyValueNode) {
-                return keyValueNode[0];
+            assert.deepEqual(ast.properties.map(function (objectKeyValNode) {
+                return objectKeyValNode.key;
             }), ['a', 'b']);
         }
     },
     'without canonicalize option': {
         topic: uglifyAst.objToAst({b: 'b', a: 'a'}),
         'should put the keys in the original order': function (ast) {
-            assert.deepEqual(ast[1].map(function (keyValueNode) {
-                return keyValueNode[0];
+            assert.deepEqual(ast.properties.map(function (objectKeyValNode) {
+                return objectKeyValNode.key;
             }), ['b', 'a']);
         }
     },
     'convert ast to function': {
         topic: function () {
-            return uglifyAst.astToObj(['function', 'foo', ['bar', 'quux'], [['stat', ['call', ['name', 'bar'], []]]]]);
+            return uglifyAst.astToObj(
+                new uglifyJs.AST_Function({
+                    name: new uglifyJs.AST_SymbolDeclaration({name: 'foo'}),
+                    argnames: [
+                        new uglifyJs.AST_SymbolFunarg({name: 'bar'}),
+                        new uglifyJs.AST_SymbolFunarg({name: 'quux'})
+                    ],
+                    body: [
+                        new uglifyJs.AST_SimpleStatement({
+                            body: new uglifyJs.AST_Call({
+                                expression: new uglifyJs.AST_SymbolRef({name: 'bar'}),
+                                args: []
+                            })
+                        })
+                    ]
+                })
+            );
         },
         'should produce the expected object': function (topic) {
             assert.isFunction(topic);
             assert.matches(topic.toString(), /^function (?:anonymous\s?)?\(bar,\s*quux\)\s*\{[\n\s]*bar\(\);?[\s\n]*\}$/);
         }
     },
-    'pullCommonStructuresIntoVars': {
+    'uglifyAst.pullCommonStructuresIntoVars': {
         topic: function () {
-            var ast = uglifyJs.parser.parse("var foo = [{bar: 'vqowiejjvqowejvqiwoevjqwev'}, 'quux', 'bar', {bar: 'vqowiejjvqowejvqiwoevjqwev'}];");
+            var ast = uglifyJs.parse("var foo = [{bar: 'vqowiejjvqowejvqiwoevjqwev'}, 'quux', 'bar', {bar: 'vqowiejjvqowejvqiwoevjqwev'}];");
             uglifyAst.pullCommonStructuresIntoVars(ast, 'prefix');
             return ast;
         },
         'should pull {bar: \'vqowiejjvqowejvqiwoevjqwev\'} into a var': function (ast) {
-            assert.equal(uglifyJs.uglify.gen_code(ast), 'var prefix1={bar:"vqowiejjvqowejvqiwoevjqwev"};var foo=[prefix1,"quux","bar",prefix1]');
+            assert.equal(ast.print_to_string(), 'var prefix1={bar:"vqowiejjvqowejvqiwoevjqwev"};var foo=[prefix1,"quux","bar",prefix1];');
+        }
+    },
+    'uglifyAst.replaceDescendantNode': {
+        topic: function () {
+            var ast = uglifyJs.parse('var a = 123');
+            uglifyAst.replaceDescendantNode(ast, ast.body[0].definitions[0].value, new uglifyJs.AST_Number({value: 456}));
+            return ast;
+        },
+        'should replace 123 with 456': function (ast) {
+            assert.equal(ast.print_to_string(), 'var a=456;');
+        }
+    },
+    'uglifyAst.parseExpression': {
+        topic: function () {
+            return uglifyAst.parseExpression('123');
+        },
+        'should return an AST_Number node with the expected properties': function (ast) {
+            assert.ok(ast instanceof uglifyJs.AST_Number);
+            assert.equal(ast.value, 123);
+            assert.equal(ast.print_to_string(), '123');
         }
     }
 })['export'](module);
