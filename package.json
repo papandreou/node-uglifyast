@@ -7,11 +7,9 @@
         "url": "git://github.com/papandreou/node-uglifyast.git"
     },
     "main": "lib/uglifyAst.js",
-    "dependencies": {
-        "uglify-js": "=2.2.5"
-    },
     "devDependencies": {
-        "vows": "=0.7.0"
+        "vows": "=0.7.0",
+        "uglify-js": "=2.2.5"
     },
     "optionalDependencies": {}
 }
