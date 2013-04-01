@@ -40,6 +40,15 @@ function testCase(ast, obj) {
     };
 }
 
+function createFoldConstantTestCase(inputStr, expectedOutputStr) {
+    return {
+        topic: uglifyAst.foldConstant(uglifyAst.parseExpression(inputStr)),
+        'should return the expected result': function (topic) {
+            assert.equal(topic.print_to_string(), expectedOutputStr);
+        }
+    };
+}
+
 vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').addBatch({
     'convert null': testCase(
         new uglifyJs.AST_Null(),
@@ -187,5 +196,10 @@ vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').add
             assert.equal(ast.value, 123);
             assert.equal(ast.print_to_string(), '123');
         }
+    },
+    'uglifyAst.foldConstant': {
+        'string': createFoldConstantTestCase('"foo"', '"foo"'),
+        'simple foldable expression': createFoldConstantTestCase("2 + 2", "4"),
+        'partially foldable expression': createFoldConstantTestCase("foo + (2 + 2)", "foo+4")
     }
 })['export'](module);
