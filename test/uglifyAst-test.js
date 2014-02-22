@@ -201,5 +201,11 @@ vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').add
         'string': createFoldConstantTestCase('"foo"', '"foo"'),
         'simple foldable expression': createFoldConstantTestCase("2 + 2", "4"),
         'partially foldable expression': createFoldConstantTestCase("foo + (2 + 2)", "foo+4")
+    },
+    'uglifyAst.clone': function () {
+        var ast = uglifyAst.parseExpression('{foo: "bar"}'),
+            clonedAst = uglifyAst.clone(ast);
+        assert.equal(ast.print_to_string(), clonedAst.print_to_string());
+        assert.ok(ast !== clonedAst);
     }
 })['export'](module);
