@@ -28,14 +28,6 @@ function testCase(ast, obj) {
             'should produce the expected Ast': function (_ast) {
                 assert.deepEqual(_ast, ast);
             }
-        },
-        'from obj to ast through JSON.stringify and uglifyJs.parser': {
-            topic: function () {
-                return uglifyJs.parser.parse('(' + JSON.stringify(obj) + ')')[1][0][1]; // Strip 'toplevel' and 'stat' nodes
-            },
-            'should produce the expected Ast': function (_ast) {
-                assert.deepEqual(_ast, ast);
-            }
         }
     };
 }
@@ -60,6 +52,10 @@ vows.describe('Converting JavaScript objects to Uglify Asts and vice versa').add
     'convert number literal': testCase(
         ['num', 999],
         999
+    ),
+    'convert regexp literal': testCase(
+        ['regexp', 'hey', 'gim'],
+        /hey/gim
     ),
     'convert array literal': testCase(
         ['array', [['string', 'foo'], ['name', 'true'], ['array', [['name', 'null']]]]],
